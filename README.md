@@ -60,6 +60,8 @@ The server will start at `http://localhost:5000`.
 
 ## 📡 API Endpoints (Core REST Specification)
 
+> 📘 **Täielik API leping koos kõigi JSON päringu/vastuse näidetega tiimile asub failis [API.md](API.md).**
+
 All user and profile endpoints require authentication via `Authorization: Bearer <token>`.
 Endpoints are accessible both directly and under the `/api` prefix.
 
