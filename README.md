@@ -18,7 +18,7 @@ SWAPLY matches users based on their biographical data, matching preferences, and
 
 ## 🛠️ Tech Stack
 
-- **Backend:** Node.js, Express, PostgreSQL, JWT, bcrypt, Multer, Socket.IO
+- **Backend:** Java 21, Spring Boot 3 (Spring Web, Spring Security with BCrypt, Spring JDBC, JJWT)
 - **Frontend:** React, TypeScript, Tailwind CSS
 - **Containerization & Database:** Docker, Docker Compose (PostgreSQL 16)
 
@@ -27,8 +27,8 @@ SWAPLY matches users based on their biographical data, matching preferences, and
 ## 🚀 Setup and Installation Instructions
 
 ### Prerequisites
-- [Node.js](https://nodejs.org/) (v20 or higher)
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (recommended for zero-config database setup)
+- [Java 21](https://adoptium.net/) (JDK 21)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (for PostgreSQL database)
 
 ### 1. Start the Database with Docker
 Make sure Docker Desktop is running, then run:
@@ -37,33 +37,22 @@ docker compose up -d
 ```
 This spins up a pre-configured PostgreSQL 16 container at `localhost:5432` with database `swaply_db`.
 
-### 2. Configure Environment Variables
-Copy `.env.example` into `.env` inside the `server/` directory:
+### 2. Backend Configuration
+The Spring Boot backend uses `src/main/resources/application.properties` pre-configured to connect to the PostgreSQL Docker container (`localhost:5432/swaply_db`).
+
+### 3. Run the Backend Server
+Use the included Maven wrapper (no separate Maven installation required):
+
+**On Linux/macOS:**
 ```bash
 cd server
-cp .env.example .env
+./mvnw spring-boot:run
 ```
 
-### 3. Install Backend Dependencies
-```bash
+**On Windows (PowerShell / Command Prompt):**
+```powershell
 cd server
-npm install
-```
-
-### 4. Run Database Migrations
-Create all application tables, indexes, and constraints:
-```bash
-npm run db:migrate
-```
-
-To reset or wipe the database clean at any time:
-```bash
-npm run db:reset
-```
-
-### 5. Start the Backend Server
-```bash
-npm run dev
+.\mvnw.cmd spring-boot:run
 ```
 The server will start at `http://localhost:5000`.
 
@@ -88,7 +77,6 @@ Endpoints are accessible both directly and under the `/api` prefix.
 | `DELETE` | `/me/avatar` | Remove profile picture (reverts to default placeholder `👤`) |
 | `GET` | `/me/item` | Current user's active trade item |
 | `POST` | `/me/item` | Add active trade item (multipart form-data with optional image) |
-| `PUT` | `/me/item` | Update active trade item |
 | `DELETE` | `/me/item` | Archive active trade item |
 | `GET` | `/users/:id` | Returns `id`, `name`, and `profile_picture` (returns 404 if not allowed) |
 | `GET` | `/users/:id/profile` | Returns `id`, `about_me`, and `city` (returns 404 if not allowed) |
@@ -105,9 +93,8 @@ Endpoints are accessible both directly and under the `/api` prefix.
 
 During peer review, you can reset the database and reload test data with:
 ```bash
-# Reset database schema:
-npm run db:reset
-
-# Load fictitious test users (100+ profiles):
-npm run db:seed
+# Reset database container:
+docker compose down -v
+docker compose up -d
 ```
+Upon restart, Spring Boot automatically applies `schema.sql`.

@@ -16,6 +16,14 @@ dist/
 build/
 coverage/
 
+# Java & Maven build artifacts
+target/
+server/target/
+*.class
+*.jar
+*.war
+.mvn/wrapper/maven-wrapper.jar
+
 # Uploaded user files
 server/public/uploads/avatars/*
 !server/public/uploads/avatars/default-avatar.svg
