@@ -94,6 +94,52 @@ public class ItemController {
         return ResponseEntity.status(HttpStatus.CREATED).body(getMeItem(principal).getBody());
     }
 
+    @PutMapping({"/me/item", "/api/me/item"})
+    public ResponseEntity<Map<String, Object>> updateMeItem(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(value = "title", required = false) String title,
+            @RequestParam(value = "description", required = false) String description,
+            @RequestParam(value = "category", required = false) String category,
+            @RequestParam(value = "condition", required = false) String condition,
+            @RequestParam(value = "estimated_value", required = false) Double estimatedValue,
+            @RequestParam(value = "image", required = false) MultipartFile image) throws IOException {
+
+        var rows = jdbcTemplate.queryForList(
+                "SELECT id, image_url FROM items WHERE user_id = ? AND status = 'active' LIMIT 1", principal.id());
+        if (rows.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No active item found to update");
+        }
+
+        var item = rows.get(0);
+        Long itemId = ((Number) item.get("id")).longValue();
+        String currentImageUrl = (String) item.get("image_url");
+
+        String newImageUrl = currentImageUrl;
+        if (image != null && !image.isEmpty()) {
+            Path itemDir = Paths.get(uploadDir, "items");
+            Files.createDirectories(itemDir);
+            String originalName = image.getOriginalFilename() != null ? image.getOriginalFilename() : "item.jpg";
+            String ext = originalName.contains(".") ? originalName.substring(originalName.lastIndexOf(".")) : ".jpg";
+            String filename = "item-" + principal.id() + "-" + System.currentTimeMillis() + ext;
+            Files.copy(image.getInputStream(), itemDir.resolve(filename));
+            newImageUrl = "/uploads/items/" + filename;
+        }
+
+        jdbcTemplate.update(
+                "UPDATE items SET " +
+                "title = COALESCE(?, title), " +
+                "description = COALESCE(?, description), " +
+                "category = COALESCE(?, category), " +
+                "condition = COALESCE(?, condition), " +
+                "estimated_value = COALESCE(?, estimated_value), " +
+                "image_url = ?, " +
+                "updated_at = NOW() WHERE id = ?",
+                title, description, category, condition, estimatedValue, newImageUrl, itemId);
+
+        profileCompletionService.checkAndUpdateCompletion(principal.id());
+        return ResponseEntity.ok(getMeItem(principal).getBody());
+    }
+
     @DeleteMapping({"/me/item", "/api/me/item"})
     public ResponseEntity<Map<String, String>> deleteMeItem(@AuthenticationPrincipal UserPrincipal principal) {
         int updated = jdbcTemplate.update(

@@ -128,6 +128,16 @@ public class UserController {
         Number minVal = (Number) body.get("min_value");
         Number maxVal = (Number) body.get("max_value");
         Number maxDist = (Number) body.get("max_distance_km");
+        Object weightsObj = body.get("weights");
+
+        String weightsJson = null;
+        if (weightsObj != null) {
+            try {
+                weightsJson = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(weightsObj);
+            } catch (Exception ignored) {}
+        }
+
+        final String finalWeightsJson = weightsJson;
 
         jdbcTemplate.execute((java.sql.Connection conn) -> {
             var ps = conn.prepareStatement(
@@ -138,6 +148,7 @@ public class UserController {
                     "min_value = COALESCE(?, min_value), " +
                     "max_value = COALESCE(?, max_value), " +
                     "max_distance_km = COALESCE(?, max_distance_km), " +
+                    "weights = CASE WHEN ?::jsonb IS NOT NULL THEN ?::jsonb ELSE weights END, " +
                     "updated_at = NOW() WHERE user_id = ?");
 
             if (interests != null) {
@@ -167,7 +178,15 @@ public class UserController {
             if (maxDist != null) ps.setInt(6, maxDist.intValue());
             else ps.setNull(6, java.sql.Types.INTEGER);
 
-            ps.setLong(7, principal.id());
+            if (finalWeightsJson != null) {
+                ps.setString(7, finalWeightsJson);
+                ps.setString(8, finalWeightsJson);
+            } else {
+                ps.setNull(7, java.sql.Types.OTHER);
+                ps.setNull(8, java.sql.Types.OTHER);
+            }
+
+            ps.setLong(9, principal.id());
             ps.executeUpdate();
             return null;
         });

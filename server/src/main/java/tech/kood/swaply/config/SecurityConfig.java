@@ -36,7 +36,7 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/**", "/api/auth/**", "/health", "/uploads/**", "/error").permitAll()
+                .requestMatchers("/auth/**", "/api/auth/**", "/dev/**", "/api/dev/**", "/health", "/uploads/**", "/error").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
