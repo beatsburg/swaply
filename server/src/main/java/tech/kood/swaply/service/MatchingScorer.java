@@ -86,4 +86,38 @@ public class MatchingScorer {
                 + condition * wCondition + interests * wInterests) / weightSum;
         return total;
     }
+
+    public static double scorePair(UserData me, UserData them) {
+        // 1. distance gate
+        double km = distanceKm(me.latitude(), me.longitude(), them.latitude(), them.longitude());
+        if (km > me.maxDistanceKm() || km > them.maxDistanceKm()) {
+            return 0.0;
+        }
+
+        // 2. category gate
+        boolean iWantTheirs = wants(me.preferredCategories(), them.itemCategory());
+        boolean theyWantMine = wants(them.preferredCategories(), me.itemCategory());
+        if (!iWantTheirs && !theyWantMine) {
+            return 0.0;
+        }
+
+        // 3. five channels
+        double category = pairScore(iWantTheirs, theyWantMine);
+
+        double value = pairScore(
+                inRange(them.itemValue(), me.minValue(), me.maxValue()),
+                inRange(me.itemValue(), them.minValue(), them.maxValue()));
+
+        double condition = pairScore(
+                wants(me.preferredConditions(), them.itemCondition()),
+                wants(them.preferredConditions(), me.itemCondition()));
+
+        double distance = distanceScore(km, me.maxDistanceKm(), them.maxDistanceKm());
+
+        double interests = interestScore(me.interests(), them.interests());
+
+        // 4. mix with MY weights
+        return mixer(category, value, distance, condition, interests,
+                me.wCategory(), me.wValue(), me.wDistance(), me.wCondition(), me.wInterests());
+    }
 }
