@@ -12,6 +12,44 @@ public class RecommendationService {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    private static final String CANDIDATES_SQL = """
+            SELECT p.user_id, p.latitude, p.longitude,
+                   b.max_distance_km, b.interests, b.preferred_categories, b.preferred_conditions,
+                   b.min_value, b.max_value, b.weights,
+                   i.category, i.condition, i.estimated_value
+            FROM profiles p
+            JOIN user_bios b ON b.user_id = p.user_id
+            JOIN items i     ON i.user_id = p.user_id
+            WHERE i.status = 'active'
+              AND p.user_id <> ?
+              AND p.is_completed = true
+              AND p.latitude IS NOT NULL
+              AND NOT EXISTS (
+                    SELECT 1 FROM swipes s
+                    WHERE s.swiper_id = ?
+                      AND s.target_user_id = p.user_id
+              )
+              AND NOT EXISTS (
+                    SELECT 1 FROM swipes s
+                    WHERE s.swiper_id = p.user_id
+                      AND s.target_user_id = ?
+                      AND s.direction = 'dismiss'
+              )
+              AND NOT EXISTS (
+                    SELECT 1 FROM connections c
+                    WHERE (c.user1_id = ? AND c.user2_id = p.user_id)
+                       OR (c.user1_id = p.user_id AND c.user2_id = ?)
+              )
+            """;
+
+    public java.util.List<UserData> loadCandidates(Long myId) {
+        return jdbcTemplate.query(
+                CANDIDATES_SQL,
+                (rs, rowNum) -> mapRow(rs),
+                myId, myId, myId, myId, myId
+        );
+    }
+
     private UserData mapRow(java.sql.ResultSet rs) throws java.sql.SQLException {
         java.util.Map<String, Object> w = parseWeights(rs.getString("weights"));
 
