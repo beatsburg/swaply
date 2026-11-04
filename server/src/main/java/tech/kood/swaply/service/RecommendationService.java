@@ -50,6 +50,27 @@ public class RecommendationService {
         );
     }
 
+        private static final String ME_SQL = """
+            SELECT p.user_id, p.latitude, p.longitude,
+                   b.max_distance_km, b.interests, b.preferred_categories, b.preferred_conditions,
+                   b.min_value, b.max_value, b.weights,
+                   i.category, i.condition, i.estimated_value
+            FROM profiles p
+            JOIN user_bios b ON b.user_id = p.user_id
+            JOIN items i     ON i.user_id = p.user_id
+            WHERE i.status = 'active'
+              AND p.user_id = ?
+            """;
+
+        public UserData loadMe(Long myId) {
+            java.util.List<UserData> rows = jdbcTemplate.query(ME_SQL, (rs, rowNum) -> mapRow(rs), myId);
+            if (rows.isEmpty()) {
+                return null;
+            }
+            return rows.get((0));
+        }
+
+
     private UserData mapRow(java.sql.ResultSet rs) throws java.sql.SQLException {
         java.util.Map<String, Object> w = parseWeights(rs.getString("weights"));
 
