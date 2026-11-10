@@ -414,3 +414,95 @@ Kui token puudub või on vigane, tagastatakse `401 Unauthorized`:
   "status": "empty"
 }
 ```
+
+---
+
+## 7. Chat ja reaalajas sündmused
+
+> **Reegel:** vestelda saavad ainult kasutajad, kelle vahel on **aktsepteeritud** ühendus (`connections.status = 'accepted'`).  
+> Kahe kasutaja vahel on alati **üks** vestlus (`conversations` tabelis on väiksem id alati `user1_id`, UNIQUE paar).  
+> Kui vestlus ei ole sinu oma või ühendus on katkestatud, tagastatakse `404 Not Found`.
+
+### 7.1 Minu vestlused
+- **Meetod:** `GET`
+- **Teekond:** `/chats` või `/api/chats`
+- **Vastus:** viimase sõnumi järgi, uuemad eespool:
+```json
+[
+  {
+    "id": 3,
+    "user_id": 2,
+    "unread_count": 1,
+    "last_message": { "content": "Millal sobiks kokku saada?", "sender_id": 2, "created_at": "2026-11-10T18:41:00Z" },
+    "updated_at": "2026-11-10T18:41:00Z"
+  }
+]
+```
+*(`last_message` on `null`, kui vestluses pole veel sõnumeid.)*
+
+### 7.2 Vestluse alustamine või jätkamine
+- **Meetod:** `POST`
+- **Teekond:** `/chats` või `/api/chats`
+- **Päringu keha:** `{ "user_id": 2 }`
+- **Vastus:** `{ "id": 3, "user_id": 2 }` (kui vestlus on juba olemas, tagastatakse sama vestlus)
+
+### 7.3 Ühe vestluse info
+- **Meetod:** `GET`
+- **Teekond:** `/chats/{id}` või `/api/chats/{id}`
+- **Vastus:** `{ "id": 3, "user_id": 2 }` (`user_id` on vestluse teine osapool)
+
+### 7.4 Sõnumid (lehekülgedena)
+- **Meetod:** `GET`
+- **Teekond:** `/chats/{id}/messages?limit=20&before=145`
+  - `limit` vaikimisi 20, maksimaalselt 50
+  - `before` = vanima juba laaditud sõnumi `id`, et saada sellest vanemad sõnumid
+- **Vastus:** lehe sees vanemast uuemani:
+```json
+{
+  "messages": [
+    { "id": 144, "chat_id": 3, "sender_id": 1, "content": "Tere!", "is_read": true, "created_at": "2026-11-10T18:40:12Z" }
+  ],
+  "has_more": true
+}
+```
+
+### 7.5 Sõnumi saatmine
+- **Meetod:** `POST`
+- **Teekond:** `/chats/{id}/messages`
+- **Päringu keha:** `{ "content": "Tere!" }` (1 kuni 2000 tähemärki, muidu `400`)
+- **Vastuskood:** `201 Created`, vastuseks salvestatud sõnum. Sama sõnum saadetakse WebSocketi kaudu kohe mõlemale kasutajale.
+
+### 7.6 Sõnumite loetuks märkimine
+- **Meetod:** `POST`
+- **Teekond:** `/chats/{id}/read`
+- **Vastus:** `{ "updated": 2 }`
+
+### 7.7 Online staatus
+- **Meetod:** `GET`
+- **Teekond:** `/presence/{id}` või `/api/presence/{id}`
+- **Vastus:** `{ "id": 2, "online": true }` (samad nägemisõigused nagu `/users/{id}`, muidu `404`)
+
+### 7.8 WebSocket
+- **Aadress:** `ws://localhost:5000/api/ws?token=<JWT>` (frontendis läbi Vite proxy: `ws://localhost:5173/api/ws?token=...`)
+- Vigase või puuduva tokeni korral ühendust ei looda (`401`).
+
+**Server → klient** (JSON, väli `type`):
+
+| `type` | Väljad | Millal |
+|---|---|---|
+| `presence_snapshot` | `online: [id, ...]` | kohe pärast ühendumist, millised minu ühendused on online |
+| `presence` | `user_id`, `online` | mõni minu ühendus tuli online või läks offline |
+| `message` | `chat_id`, `message` | uus sõnum |
+| `read` | `chat_id`, `reader_id` | sõnumid loeti |
+| `typing` | `chat_id`, `user_id`, `typing` | teine kasutaja kirjutab / lõpetas |
+| `pong` | | vastus `ping`-ile |
+
+**Klient → server:**
+- `{ "type": "typing", "chat_id": 3, "typing": true }`
+- `{ "type": "ping" }` (iga 25 sekundi järel, et ühendus lahti ei läheks)
+
+**Teavitused teistest osadest:** backendis saab iga teenus saata kasutajale reaalajas sündmuse:
+```java
+realtimeService.notifyUser(targetUserId, "connection_request", Map.of("from_user_id", myId));
+```
+Frontend laeb päringud/ühendused uuesti, kui tuleb `connection_request`, `connection_accepted`, `match` või `disconnected`.

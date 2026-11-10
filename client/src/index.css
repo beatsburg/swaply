@@ -1,0 +1,62 @@
+@import "tailwindcss";
+@import "@fontsource-variable/bricolage-grotesque";
+
+@theme {
+  --font-sans: "Bricolage Grotesque Variable", ui-sans-serif, system-ui, sans-serif;
+
+  --color-ink: #1b1f3b;
+  --color-ink-soft: #5a5f7d;
+  --color-paper: #f1f3f8;
+  --color-line: #dcdfea;
+  --color-swap: #3a41e0;
+  --color-swap-dark: #2a30b5;
+  --color-swap-soft: #e4e5fc;
+  --color-tag: #ffd64a;
+  --color-tag-dark: #e0b520;
+  --color-pass: #e5484d;
+  --color-online: #1f9d63;
+}
+
+/* In the base layer so Tailwind utilities (focus:outline-none etc.) can override it */
+@layer base {
+  html,
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-swap);
+    outline-offset: 2px;
+  }
+}
+
+/* The hole punched in the yellow price tag */
+.tag-hole::before {
+  content: "";
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  margin-top: -3.5px;
+  border-radius: 999px;
+  background: var(--color-paper);
+  box-shadow: inset 0 0 0 1.5px var(--color-tag-dark);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

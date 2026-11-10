@@ -37,6 +37,8 @@ public class SecurityConfig {
             .exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/auth/**", "/api/auth/**", "/dev/**", "/api/dev/**", "/health", "/uploads/**", "/error").permitAll()
+                // WebSocket handshake checks the JWT itself (JwtHandshakeInterceptor), browsers can't send the header
+                .requestMatchers("/ws", "/api/ws").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

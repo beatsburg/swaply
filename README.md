@@ -19,7 +19,8 @@ SWAPLY matches users based on their biographical data, matching preferences, and
 ## 🛠️ Tech Stack
 
 - **Backend:** Java 21, Spring Boot 3 (Spring Web, Spring Security with BCrypt, Spring JDBC, JJWT)
-- **Frontend:** React, TypeScript, Tailwind CSS
+- **Frontend:** React 19, TypeScript, Vite, React Router, Tailwind CSS 4
+- **Real-time:** Spring WebSocket (chat messages, unread badges, typing indicator, online status)
 - **Containerization & Database:** Docker, Docker Compose (PostgreSQL 16)
 
 ---
@@ -55,6 +56,35 @@ cd server
 .\mvnw.cmd spring-boot:run
 ```
 The server will start at `http://localhost:5000`.
+
+### 4. Run the Frontend
+Requires [Node.js 20+](https://nodejs.org/). In a second terminal:
+```bash
+cd client
+npm install
+npm run dev
+```
+Open `http://localhost:5173`. The Vite dev server proxies `/api` (REST and WebSocket) and `/uploads` to the backend on port 5000, so no CORS setup is needed. If the backend runs somewhere else, start the frontend with `BACKEND_URL=http://host:port npm run dev`.
+
+Production build: `npm run build`, then `npm run preview` (serves the build on `http://localhost:4173` with the same proxy).
+
+---
+
+## 🧭 Usage Guide
+
+1. **Register** with name, email and password. You land on your profile.
+2. **Complete your profile** (the checklist at the top shows what's missing): location (city or browser GPS), one item to swap, interests, item categories you want, accepted conditions, value range, max distance and how much each of these matters to you. Discover, requests, connections and chats stay locked until the profile is complete.
+3. **Discover**: up to 10 recommended people at a time, best match first, shown as their item on a card. Drag the card right or press ♥ to request a swap, left or ✕ to pass. A passed person is never shown again. On desktop the ← and → keys work too.
+4. **Requests**: people who want your item. Accept or decline. When two people like each other's items it's a match and they are connected.
+5. **Connections**: everyone you're connected with, with online status. Open a chat or disconnect.
+6. **Chats**: all chats, newest message first, with unread counts. Messages arrive instantly, the other person sees "typing…" while you write, and "seen" when they've read your message. Older messages load when you scroll up.
+7. **Log out** is in the top bar on every page.
+
+## ⚡ Real-time (WebSocket)
+
+The browser opens one WebSocket to `/api/ws?token=<JWT>` after login (browsers can't send an `Authorization` header on a WebSocket, so the token goes in the query string and `JwtHandshakeInterceptor` checks it). Messages are sent with REST (`POST /api/chats/{id}/messages`), saved to PostgreSQL and then pushed to both users over the socket. No polling anywhere; lists reload only when an event says something changed. If the connection drops, the client reconnects with backoff and reloads what it may have missed. Details in [API.md](API.md#7-chat-ja-reaalajas-sündmused).
+
+Backend code: `server/src/main/java/tech/kood/swaply/realtime/`. Frontend code: `client/src/context/RealtimeContext.tsx`, `client/src/pages/ChatPage.tsx`.
 
 ---
 
