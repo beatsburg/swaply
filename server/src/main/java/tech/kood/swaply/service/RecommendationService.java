@@ -115,6 +115,7 @@ public class RecommendationService {
         );
     }
 
+
     public java.util.List<Long> refreshRecommendations(Long myId) {
         java.util.List<Scored> results = scoreCandidates(myId);
 
@@ -125,9 +126,17 @@ public class RecommendationService {
         int howMany = Math.min(10, results.size());
         java.util.List<Scored> top = results.subList(0, howMany);
 
-        // 3. only the ids
+        // 3. clear my old recommendations
+        jdbcTemplate.update(
+                "DELETE FROM active_recommendations WHERE user_id = ?",
+                myId);
+
+        // 4. save the new ones, and collect the ids
         java.util.List<Long> ids = new java.util.ArrayList<>();
         for (Scored s : top) {
+            jdbcTemplate.update(
+                    "INSERT INTO active_recommendations (user_id, recommended_user_id, score) VALUES (?, ?, ?)",
+                    myId, s.id(), s.score());
             ids.add(s.id());
         }
         return ids;
