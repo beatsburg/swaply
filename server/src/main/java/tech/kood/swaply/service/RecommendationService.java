@@ -12,6 +12,8 @@ public class RecommendationService {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    record Scored(Long id, double score) {}
+
     private static final String CANDIDATES_SQL = """
             SELECT p.user_id, p.latitude, p.longitude,
                    b.max_distance_km, b.interests, b.preferred_categories, b.preferred_conditions,
@@ -69,7 +71,21 @@ public class RecommendationService {
             }
             return rows.get((0));
         }
+    public java.util.List<Scored> scoreCandidates(Long myId) {
+        UserData me = loadMe(myId);
+        if (me == null) {
+            return java.util.List.of();
+        }
 
+        java.util.List<Scored> results = new java.util.ArrayList<>();
+        for (UserData them : loadCandidates(myId)) {
+            double score = MatchingScorer.scorePair(me, them);
+            if (score >= 0.4) {
+                results.add(new Scored(them.id(), score));
+            }
+        }
+        return results;
+    }
 
     private UserData mapRow(java.sql.ResultSet rs) throws java.sql.SQLException {
         java.util.Map<String, Object> w = parseWeights(rs.getString("weights"));
