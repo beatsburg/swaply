@@ -115,6 +115,24 @@ public class RecommendationService {
         );
     }
 
+    public java.util.List<Long> refreshRecommendations(Long myId) {
+        java.util.List<Scored> results = scoreCandidates(myId);
+
+        // 1. best first
+        results.sort((a, b) -> Double.compare(b.score(), a.score()));
+
+        // 2. keep at most 10
+        int howMany = Math.min(10, results.size());
+        java.util.List<Scored> top = results.subList(0, howMany);
+
+        // 3. only the ids
+        java.util.List<Long> ids = new java.util.ArrayList<>();
+        for (Scored s : top) {
+            ids.add(s.id());
+        }
+        return ids;
+    }
+
     // --- ready-made helpers ---
 
     private static java.util.List<String> toList(java.sql.Array arr) throws java.sql.SQLException {
