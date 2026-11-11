@@ -49,3 +49,4 @@ public class StubController {
         return ResponseEntity.ok(ids);
     }
 }
+
