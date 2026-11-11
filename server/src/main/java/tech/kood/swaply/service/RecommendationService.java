@@ -6,13 +6,13 @@ import org.springframework.stereotype.Service;
 @Service
 public class RecommendationService {
 
-    private final JdbcTemplate jdbcTemplate;
+    private final JdbcTemplate jdbcTemplate;                    // cable to the database
 
-    public RecommendationService(JdbcTemplate jdbcTemplate) {
+    public RecommendationService(JdbcTemplate jdbcTemplate) {          // Spring plugs the cable in
         this.jdbcTemplate = jdbcTemplate;
-    }
+    }           // Spring plugs the cable in
 
-    record Scored(Long id, double score) {}
+    record Scored(Long id, double score) {}                     // a tiny card: who + how good
 
     private static final String CANDIDATES_SQL = """
             SELECT p.user_id, p.latitude, p.longitude,
@@ -163,3 +163,4 @@ public class RecommendationService {
         return (v instanceof Number n) ? n.intValue() : 1;
     }
 }
+
