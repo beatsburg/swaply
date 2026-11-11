@@ -18,8 +18,8 @@ public class ProfileCompletionService {
     public boolean checkAndUpdateCompletion(Long userId) {
         if (userId == null) return false;
 
-        // Check profile name
-        String nameSql = "SELECT name FROM profiles WHERE user_id = ?";
+        // Check profile name and location
+        String nameSql = "SELECT name, latitude, longitude FROM profiles WHERE user_id = ?";
         var nameRows = jdbcTemplate.queryForList(nameSql, userId);
         if (nameRows.isEmpty()) {
             setCompleted(userId, false);
@@ -30,6 +30,8 @@ public class ProfileCompletionService {
             setCompleted(userId, false);
             return false;
         }
+        boolean hasLocation = nameRows.get(0).get("latitude") != null
+                && nameRows.get(0).get("longitude") != null;
 
         // Check bio 5 points
         String bioSql = "SELECT interests, preferred_categories, preferred_conditions, max_distance_km FROM user_bios WHERE user_id = ?";
@@ -51,7 +53,7 @@ public class ProfileCompletionService {
         Integer activeItemCount = jdbcTemplate.queryForObject(itemSql, Integer.class, userId);
         boolean hasActiveItem = activeItemCount != null && activeItemCount > 0;
 
-        boolean isCompleted = hasInterests && hasCategories && hasConditions && hasDistance && hasActiveItem;
+        boolean isCompleted = hasInterests && hasCategories && hasConditions && hasDistance && hasActiveItem && hasLocation;
         setCompleted(userId, isCompleted);
         return isCompleted;
     }
