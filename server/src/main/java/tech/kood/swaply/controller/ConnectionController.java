@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import tech.kood.swaply.realtime.RealtimeService;
 import tech.kood.swaply.security.UserPrincipal;
 
 import java.util.List;
@@ -13,9 +14,11 @@ import java.util.Map;
 public class ConnectionController {
 
     private final JdbcTemplate jdbcTemplate;
+    private final RealtimeService realtimeService;
 
-    public ConnectionController(JdbcTemplate jdbcTemplate) {
+    public ConnectionController(JdbcTemplate jdbcTemplate, RealtimeService realtimeService) {
         this.jdbcTemplate = jdbcTemplate;
+        this.realtimeService = realtimeService;
     }
 
     // what the frontend sends when swiping: { "target_user_id": 5, "direction": "like" }
@@ -42,10 +45,11 @@ public class ConnectionController {
         if ("like".equals(direction)) {
             int updated = jdbcTemplate.update(
                     "UPDATE connections SET status = 'accepted', updated_at = NOW() " +
-                    "WHERE user1_id = ? AND user2_id = ? AND requester_id = ? AND status = 'pending'",
+                            "WHERE user1_id = ? AND user2_id = ? AND requester_id = ? AND status = 'pending'",
                     user1, user2, target);
             if (updated > 0) {
                 saveSwipe(me, target, direction);
+                realtimeService.notifyUser(target, "connection_accepted", null);      // 🔔
                 return ResponseEntity.ok(Map.of("matched", true));
             }
         }
@@ -66,10 +70,13 @@ public class ConnectionController {
 
         // 5. like = send a request (lower id always stored first)
         if ("like".equals(direction)) {
-            jdbcTemplate.update(
+            int created = jdbcTemplate.update(
                     "INSERT INTO connections (user1_id, user2_id, requester_id, status) " +
-                    "VALUES (?, ?, ?, 'pending') ON CONFLICT (user1_id, user2_id) DO NOTHING",
+                            "VALUES (?, ?, ?, 'pending') ON CONFLICT (user1_id, user2_id) DO NOTHING",
                     user1, user2, me);
+            if (created > 0) {
+                realtimeService.notifyUser(target, "connection_request", null);       // 🔔
+            }
         }
 
         return ResponseEntity.ok(Map.of("matched", false));
@@ -78,7 +85,7 @@ public class ConnectionController {
     private void saveSwipe(Long me, Long target, String direction) {
         jdbcTemplate.update(
                 "INSERT INTO swipes (swiper_id, target_user_id, direction) VALUES (?, ?, ?) " +
-                "ON CONFLICT (swiper_id, target_user_id) DO NOTHING",
+                        "ON CONFLICT (swiper_id, target_user_id) DO NOTHING",
                 me, target, direction);
     }
 
@@ -116,6 +123,9 @@ public class ConnectionController {
         if (updated == 0) {
             return ResponseEntity.notFound().build();
         }
+        if ("accepted".equals(newStatus)) {
+            realtimeService.notifyUser(otherId, "connection_accepted", null);         // 🔔
+        }
         return ResponseEntity.ok(Map.of("status", newStatus));
     }
 
@@ -131,7 +141,7 @@ public class ConnectionController {
         if (updated == 0) {
             return ResponseEntity.notFound().build();
         }
+        realtimeService.notifyUser(otherId, "disconnected", null);                    // 🔔
         return ResponseEntity.ok(Map.of("status", "disconnected"));
     }
 }
-
