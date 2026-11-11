@@ -6,10 +6,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class RecommendationService {
 
-    private final JdbcTemplate jdbcTemplate;                    // cable to the database
+    private final JdbcTemplate jdbcTemplate;                    // empty slot/cable to the database
 
-    public RecommendationService(JdbcTemplate jdbcTemplate) {          // Spring plugs the cable in
-        this.jdbcTemplate = jdbcTemplate;
+    public RecommendationService(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;               // Spring hands in the cable
     }           // Spring plugs the cable in
 
     record Scored(Long id, double score) {}                     // a tiny card: who + how good
@@ -24,7 +24,7 @@ public class RecommendationService {
             JOIN items i     ON i.user_id = p.user_id
             WHERE i.status = 'active'
               AND p.user_id <> ?
-              AND p.is_completed = true
+              AND p.is_completed = true         
               AND p.latitude IS NOT NULL
               AND NOT EXISTS (
                     SELECT 1 FROM swipes s
