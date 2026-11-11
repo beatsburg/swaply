@@ -26,6 +26,12 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+        <!-- WebSocket for real-time chat, typing and online status (Person C) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
+
         <!-- Spring Security for BCrypt and Password Hashing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
